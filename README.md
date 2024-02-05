@@ -38,10 +38,16 @@ Comma separated file with 3 mandatory + 1 optional columns:
 # Trick to create sample sheet if your files are named as cellID_extra?_S[1-9].R[12]_001.fastq.gz
 # We will link cellID to a reference genome in the "Genome Samplesheet"
 # Examples: Nvec_H3K36me3_301121_S27_R1_001.fastq.gz & Nvec_H3K36me3_301121_S27_R2_001.fastq.gz
-for i in *fastq.gz; do echo $i | sed 's/_R._001.fastq.gz//g' ; done | sort | uniq > samplesNames.txt  
+for i in *fastq.gz; do
+    echo $i | sed 's/_R._001.fastq.gz//g' ;
+done | sort | uniq > samplesNames.txt
+
 echo "fastq_1,fastq_2,refID"; for i in $(cat samplesNames.txt); do 
-  f1=$(find ${i}_R1_001.fastq.gz); f2=$(find ${i}_R2_001.fastq.gz); refID=(${i/_/ }); refID=${refID[0]};
-  echo "${f1},${f2},${refID}"; done > alignment_samplesheet.csv
+    f1=$(find ${i}_R1_001.fastq.gz);
+    f2=$(find ${i}_R2_001.fastq.gz);
+    refID=(${i/_/ }); refID=${refID[0]};
+    echo "${f1},${f2},${refID}";
+done > alignment_samplesheet.csv
 ```
 
 ## 2. Genome Samplesheet
