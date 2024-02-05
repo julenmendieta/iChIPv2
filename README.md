@@ -42,12 +42,13 @@ for i in *fastq.gz; do
     echo $i | sed 's/_R._001.fastq.gz//g' ;
 done | sort | uniq > samplesNames.txt
 
-echo "fastq_1,fastq_2,refID"; for i in $(cat samplesNames.txt); do 
+echo "fastq_1,fastq_2,refID" > alignment_samplesheet.csv ;
+for i in $(cat samplesNames.txt); do 
     f1=$(find ${i}_R1_001.fastq.gz);
     f2=$(find ${i}_R2_001.fastq.gz);
     refID=(${i/_/ }); refID=${refID[0]};
     echo "${f1},${f2},${refID}";
-done > alignment_samplesheet.csv
+done >> alignment_samplesheet.csv
 ```
 
 ## 2. Genome Samplesheet
