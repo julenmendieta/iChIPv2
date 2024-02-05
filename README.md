@@ -25,7 +25,7 @@ Once dependencies are installed, make sure the pipeline works by running `pendin
 Code to run test
 ```
 # Sample sheets format
-## Alignment Samplesheet
+## 1. Alignment Samplesheet
 Comma separated file with 3 mandatory + 1 optional columns:  
 | Column ID        | Description          | 
 | ------------- |:-------------:|
@@ -44,7 +44,7 @@ echo "fastq_1,fastq_2,refID"; for i in $(cat samplesNames.txt); do
   echo "${f1},${f2},${refID}"; done > alignment_samplesheet.csv
 ```
 
-## Genome Samplesheet
+## 2. Genome Samplesheet
 Comma separated file with 2 mandatory columns:  
 | Column ID        | Description          | 
 | ------------- |:-------------:|
@@ -52,7 +52,7 @@ Comma separated file with 2 mandatory columns:
 | **refGenome**     | Path to reference genome fasta file. Bowtie 2 index llslasdlasldalsd    |  
 
 
-## Peak calling Samplesheet
+## 3. Peak calling Samplesheet
 Comma separated file with 3 mandatory columns:  
 | Column ID        | Description          | 
 | ------------- |:-------------:|
