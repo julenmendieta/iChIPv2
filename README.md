@@ -27,10 +27,13 @@ Code to run test
 # Sample sheets format
 ## Alignment Samplesheet
 Comma separated file with 3 mandatory + 1 optional columns:  
--**fastq_1**: FastQ file name for Illumina short reads 1. File has to be gzipped.  
--**fastq_2**: FastQ file name for Illumina short reads 2. File has to be gzipped.  
--**refID**: ID to be linked with a reference genome in the Genome Samplesheet.  
--**newName** (optional): In case you want to name output files using this label instead of file name.  
+| Column ID        | Description          | 
+| ------------- |:-------------:|
+| **fastq_1**      | FastQ file name for Illumina short reads 1. File has to be gzipped | 
+| **fastq_2**     | FastQ file name for Illumina short reads 2. File has to be gzipped     |  
+| **refID** | ID to be linked with a reference genome in the Genome Sampleshee    |
+| newName (optional) |  In case you want to name output files using this label instead of file name    |
+
  ```bash
 # Trick to create sample sheet if your files are named as cellID_extra?_S[1-9].R[12]_001.fastq.gz
 # We will link cellID to a reference genome in the "Genome Samplesheet"
@@ -43,11 +46,17 @@ echo "fastq_1,fastq_2,refID"; for i in $(cat samplesNames.txt); do
 
 ## Genome Samplesheet
 Comma separated file with 2 mandatory columns:  
--**refID**: Cell or species ID.  
--**refGenome**: Path to reference genome fasta file. Bowtie 2 index llslasdlasldalsd.  
+| Column ID        | Description          | 
+| ------------- |:-------------:|
+| **refID**      | Cell or species ID | 
+| **refGenome**     | Path to reference genome fasta file. Bowtie 2 index llslasdlasldalsd    |  
+
 
 ## Peak calling Samplesheet
 Comma separated file with 3 mandatory columns:  
--**inPath**: Path to folder containing BAM files to be analysed.  
--**controlPath**: Path to control bamfile (input, IgG, H2, etc.) for all samples in folder.  
--**refID**: ID to be linked with a reference genome in the Genome Samplesheet.  
+| Column ID        | Description          | 
+| ------------- |:-------------:|
+| **inPath**      | Path to folder containing BAM files to be analysed | 
+| **controlPath**     | Path to control bamfile (input, IgG, H2, etc.) for all samples in folder   |  
+| **refID** | ID to be linked with a reference genome in the Genome Samplesheet  |
+
