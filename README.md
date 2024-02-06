@@ -64,6 +64,6 @@ Comma separated file with 3 mandatory columns:
 | Column ID        | Description          | 
 | ------------- |:-------------:|
 | **inPath**      | Path to folder containing BAM files to be analysed | 
-| **controlPath**     | Path to control bamfile (input, IgG, H2, etc.) for all samples in folder   |  
+| **controlPath**     | Path to control bamfile (input, IgG, H3, etc.) for all samples in folder   |  
 | **refID** | ID to be linked with a reference genome in the Genome Samplesheet  |
 
