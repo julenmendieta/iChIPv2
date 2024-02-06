@@ -31,7 +31,7 @@ Comma separated file with 3 mandatory + 1 optional columns:
 | ------------- |:-------------:|
 | **fastq_1**      | FastQ file name for Illumina short reads 1. File has to be gzipped | 
 | **fastq_2**     | FastQ file name for Illumina short reads 2. File has to be gzipped     |  
-| **refID** | ID to be linked with a reference genome in the Genome Sampleshee    |
+| **refID** | ID to be linked with a reference genome in the Genome Samplesheet    |
 | newName (optional) |  In case you want to name output files using this label instead of file name    |
 
  ```bash
