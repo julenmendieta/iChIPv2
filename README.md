@@ -31,7 +31,7 @@ Comma separated file with 3 mandatory + 1 optional columns:
 | ------------- |:-------------:|
 | **fastq_1**      | FastQ file name for Illumina short reads 1. File has to be gzipped | 
 | **fastq_2**     | FastQ file name for Illumina short reads 2. File has to be gzipped     |  
-| **refID** | ID to be linked with a reference genome in the Genome Sampleshee    |
+| **refID** | ID to be linked with a reference genome in the Genome Samplesheet    |
 | newName (optional) |  In case you want to name output files using this label instead of file name    |
 
  ```bash
@@ -44,8 +44,8 @@ done | sort | uniq > samplesNames.txt
 
 echo "fastq_1,fastq_2,refID" > alignment_samplesheet.csv ;
 for i in $(cat samplesNames.txt); do 
-    f1=$(find ${i}_R1_001.fastq.gz);
-    f2=$(find ${i}_R2_001.fastq.gz);
+    f1=$(find $PWD -name "${i}_R1_001.fastq.gz");
+    f2=$(find $PWD -name "${i}_R2_001.fastq.gz");
     refID=(${i/_/ }); refID=${refID[0]};
     echo "${f1},${f2},${refID}";
 done >> alignment_samplesheet.csv
@@ -64,6 +64,6 @@ Comma separated file with 3 mandatory columns:
 | Column ID        | Description          | 
 | ------------- |:-------------:|
 | **inPath**      | Path to folder containing BAM files to be analysed | 
-| **controlPath**     | Path to control bamfile (input, IgG, H2, etc.) for all samples in folder   |  
+| **controlPath**     | Path to control bamfile (input, IgG, H3, etc.) for all samples in folder   |  
 | **refID** | ID to be linked with a reference genome in the Genome Samplesheet  |
 
