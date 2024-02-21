@@ -8,7 +8,7 @@ It takes as input Fastq files and reference genomes and organises the data by th
 # Installation  
 If you don't have it yet, first start by installing Conda [Miniforge](https://github.com/conda-forge/miniforge#miniforge).
 
-We can then move to install tool dependencies with the yaml file found [here](iChIPv2_environment.yaml):
+We can then move to install tool dependencies with the yaml file found [here](iChIPv2_environment.yml):
 
 ```bash
 # create environment
