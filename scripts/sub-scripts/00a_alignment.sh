@@ -40,15 +40,14 @@ elif [[ ${jobMode} == "Torque" ]]; then
 fi
 
 # Create alignment file folders
-if [ ! -e ${out_dir}/bam_files ]; then
-	mkdir ${out_dir}/bam_files
+if [ ! -e ${out_dir}/bam_files/valid/all ]; then
     mkdir -p ${out_dir}/bam_files/valid/all
 fi
 if [ ! -e ${out_dir}/bw_files ]; then
-	mkdir ${out_dir}/bw_files
+	mkdir -p ${out_dir}/bw_files
 fi
 if [ ! -e ${out_dir}/temp ]; then
-	mkdir ${out_dir}/temp
+	mkdir -p ${out_dir}/temp
 fi
 if [ ! -e ${out_dir}/QC/ ] ; then
     mkdir -p ${out_dir}/QC/
@@ -64,6 +63,7 @@ fastq_2=${content[1]}
 refID=${content[2]}
 newName=${content[3]}
 
+echo "${fastq_1} ${fastq_2} ${refID} ${newName}"
 ## Define file label
 if [ ! -z "${newName}" ]; then 
     fileLabel=${newName};

@@ -1,26 +1,15 @@
 #!/bin/bash
 # -*- ENCODING: UTF-8 -*-
 
-##==============================================================================
-## SLURM VARIABLES
-#SBATCH --job-name=Chip_fqToBw
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=20G
-#SBATCH --time=00-08:00:00
-#SBATCH -p short
-#SBATCH -o /home/jmendietaes/jobsSlurm/outErr/%x_%A_%a.out  
-#SBATCH -e /home/jmendietaes/jobsSlurm/outErr/%x_%A_%a.err 
-##SBATCH --dependency=afterany:624523
-
 #########################   USER-DEFINED INPUT   ###############################
 
 # Input Paths
 ## Path to alignment samplesheet
-alignS="/home/jmendietaes/data/2021/Arnau/pipelineTest/sampleSheets/alignment_samplesheet.csv"
+alignS="/home/jmendietaes/data/2021/Arnau/pipelineTest/sampleSheets/alignment_samplesheet2.csv"
 ## Path to genome samplehseet
 genomeS="/home/jmendietaes/data/2021/Arnau/pipelineTest/sampleSheets/genome_samplesheet.csv"
 ## Path to Output folder
-out_dir="/home/jmendietaes/data/2021/Arnau/pipelineTest/output" 
+out_dir="/home/jmendietaes/data/2021/Arnau/pipelineTest/output2" 
 ## Path to Git repository
 gitP="/home/jmendietaes/programas/iChIPv2"
 
@@ -34,16 +23,22 @@ condaEnv="iChIPv2"
 ## Set it to "Slurm", "Torque", or "noQueue"
 jobMode="Slurm"
 
+#################################  HOW TO RUN ME  ##############################
+#bash /home/jmendietaes/programas/iChIPv2/scripts/00_alignmentLauncher.sh
+
 ##################################   CODE   ####################################
-# Get number of files to align (header is index zero, that wont check)
+# Get number of files to align (header row has to be removed)
 nJobs=$(wc -l ${alignS} | awk '{print $1'})
+nJobs=$((${nJobs} - 1))
 
 # Purge current modules before starting job (comment it if no module system is
 # installed)
 module purge
 
 # Load conda environment
-conda activate ${condaEnv}
+#conda activate ${condaEnv}
+export PATH="~/programas/miniconda3/envs/iChIPv2/bin:$PATH"
+
 
 # Remove from samplesheets newline characters that might come from working 
 # with excel
@@ -51,8 +46,8 @@ sed -i 's/\r$//' ${alignS}
 
 if [[ ${jobMode} == "Slurm" ]]; then 
     
-    sbatch --array=1-${N} --job-name=iChIP-align --cpus-per-task=${nCPU} \
-        --mem=30G --time=00-08:00:00 \
+    sbatch --array=1-${nJobs} --job-name=iChIP-align --cpus-per-task=${nCPU} \
+        --mem=30G --time=00-08:00:00 -p short \
         ${gitP}/scripts/sub-scripts/00a_alignment.sh \
         ${alignS} ${genomeS} ${out_dir} ${nCPU} ${jobMode}
 
