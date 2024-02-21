@@ -12,7 +12,7 @@ We can then move to install tool dependencies with the yaml file found [here](iC
 
 ```bash
 # create environment
-conda env create -n iChIPv2 -f iChIPv2_environment.yaml
+conda env create -n iChIPv2 -f iChIPv2_environment.yml
 
 # activate environment
 conda activate iChIPv2
