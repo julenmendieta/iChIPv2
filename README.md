@@ -25,6 +25,7 @@ Once dependencies are installed, make sure the pipeline works by running `pendin
 Code to run test
 ```
 # Sample sheets format
+File examples [here](examples/sampleSheets)
 ## 1. Alignment Samplesheet
 Comma separated file with 3 mandatory + 1 optional columns:  
 | Column ID        | Description          | 
