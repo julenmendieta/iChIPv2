@@ -16,8 +16,11 @@ gitP="/home/jmendietaes/programas/iChIPv2"
 # Input parameters
 ## Number of threads for each job
 nCPU=8  
-## Conda environmnet name to be loaded
-condaEnv="iChIPv2"
+## Conda environmnet name to be loaded. Path to env bin folder
+# You can find it by loading the environmnet "conda activate iChIPv2"
+# and then executing:
+# which python | sed "s/\/python//g"
+condaEnv="/home/jmendietaes/programas/miniconda3/envs/iChIPv2/bin"
 ## Variable to define how to run the alignment, either by queuing sustem
 ## or each sample at a time
 ## Set it to "Slurm", "Torque", or "noQueue"
@@ -37,7 +40,7 @@ module purge
 
 # Load conda environment
 #conda activate ${condaEnv}
-export PATH="~/programas/miniconda3/envs/iChIPv2/bin:$PATH"
+export PATH="${condaEnv}:$PATH"
 
 
 # Remove from samplesheets newline characters that might come from working 
