@@ -65,7 +65,22 @@ fastq_2=${content[1]}
 refID=${content[2]}
 newName=${content[3]}
 
-echo "${fastq_1} ${fastq_2} ${refID} ${newName}"
+echo -e "fastq_1: ${fastq_1}\nfastq_2: ${fastq_2}"
+echo -e "refID: ${refID}\nnewName: ${newName}"
+
+## Step control to make sure we have input info
+if [ -z "${fastq_1}" ]; then 
+    echo "ERROR: Sample file issue with fastq_1"
+    exit 1
+if [ -z "${fastq_2}" ]; then 
+    echo "ERROR: Sample file issue with fastq_2"
+    exit 1
+if [ -z "${refID}" ]; then 
+    echo "ERROR: Sample file issue with refID"
+    exit 1
+fi
+
+
 ## Define file label
 if [ ! -z "${newName}" ]; then 
     fileLabel=${newName};
@@ -98,7 +113,7 @@ stepControl="${out_dir}/temp/pipelineStep_${fileLabel}.txt"
 if [ ! -e ${stepControl} ] ; then
     touch ${stepControl}
 fi
-summaryFile="${out_dir}/QC/summary_${fileLabel}.txt"
+summaryFile="${out_dir}/QC/summaryAlign_${fileLabel}.txt"
 
 
 echo -e "Aligning ${fileLabel}..."
