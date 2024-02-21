@@ -36,7 +36,7 @@ jobMode="Slurm"
 
 ##################################   CODE   ####################################
 # Get number of files to align (header is index zero, that wont check)
-nJobs=$(wc -l ${alignS} | awk '{print $ 1'})
+nJobs=$(wc -l ${alignS} | awk '{print $1'})
 
 # Purge current modules before starting job (comment it if no module system is
 # installed)
