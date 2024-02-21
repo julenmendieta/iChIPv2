@@ -18,12 +18,6 @@ conda env create -n iChIPv2 -f iChIPv2_environment.yaml
 conda activate iChIPv2
 ```
 
-# Test run
-Once dependencies are installed, make sure the pipeline works by running `pending` with sample data:
-
-```bash
-Code to run test
-```
 # Sample sheets format
 File examples [here](examples/sampleSheets)
 ## 1. Alignment Samplesheet
@@ -69,3 +63,16 @@ Comma separated file with 3 mandatory columns:
 | **controlPath**     | Path to control bamfile (input, IgG, H3, etc.) for all samples in folder   |  
 | **refID** | ID to be linked with a reference genome in the Genome Samplesheet  |
 
+
+# Running the scripts
+## Test run
+Once dependencies are installed, make sure the pipeline works by running `pending` with sample data:
+
+```bash
+Code to run test
+```
+
+## Run it with your own data
+1. Create the Samplesheet files and move them (or not) to a preferred location
+2. Open 00_alignmentLauncher.sh script and modify the variables in USER-DEFINED INPUT. Then execute it with bash or within a job (only valid for "noQueue" mode).  
+   The script has code that has worked in Slurm and (Torque FUTURE) queueing systems. However, if it is set to "noQueue", all the files in the Alignment Samplesheet will be aligned one after the other without parallelization. This is the only approach to use if you run the analysis on a computer without a queueing system and the best one to use if our code to run jobs is not working in your system. If that's the case, you can always create multiple Alignment Samplesheets and run them through your queuing system in "noQueue" mode.
