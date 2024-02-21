@@ -36,8 +36,9 @@ Comma separated file with 3 mandatory + 1 optional columns:
 | newName (optional) |  In case you want to name output files using this label instead of file name    |
 
  ```bash
-# Trick to create sample sheet if your files are named as cellID_extra?_S[1-9].R[12]_001.fastq.gz
+# Trick to create a sample sheet if your files are named as cellID_extra?_S[1-9].R[12]_001.fastq.gz
 # We will link cellID to a reference genome in the "Genome Samplesheet"
+# Command to be run inside the folder containing the Fastq.gz files
 # Examples: Nvec_H3K36me3_301121_S27_R1_001.fastq.gz & Nvec_H3K36me3_301121_S27_R2_001.fastq.gz
 for i in *fastq.gz; do
     echo $i | sed 's/_R._001.fastq.gz//g' ;
