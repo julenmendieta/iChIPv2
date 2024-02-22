@@ -1,0 +1,30 @@
+.
+|-- bam_files
+|   `-- valid
+|       |-- all
+|       |   |-- Scer_H3_170222_S93.q30.rmdup.bam
+|       |   |-- Scer_H3_170222_S93.q30.rmdup.bam.bai
+|       |   |-- Scer_H3K4me3_100222_S51.q30.rmdup.bam
+|       |   `-- Scer_H3K4me3_100222_S51.q30.rmdup.bam.bai
+|       `-- Scer
+|           |-- Scer_H3_170222_S93.q30.rmdup.bam -> ../all/bam_files/valid/all/Scer_H3_170222_S93.q30.rmdup.bam
+|           |-- Scer_H3_170222_S93.q30.rmdup.bam.bai -> ../all/bam_files/valid/all/Scer_H3_170222_S93.q30.rmdup.bam.bai
+|           |-- Scer_H3K4me3_100222_S51.q30.rmdup.bam -> ../all/bam_files/valid/all/Scer_H3K4me3_100222_S51.q30.rmdup.bam
+|           `-- Scer_H3K4me3_100222_S51.q30.rmdup.bam.bai -> ../all/bam_files/valid/all/Scer_H3K4me3_100222_S51.q30.rmdup.bam.bai
+|-- bw_files
+|   |-- Scer_H3_170222_S93.q30.rmdup.CPM.bw
+|   `-- Scer_H3K4me3_100222_S51.q30.rmdup.CPM.bw
+|-- peakCalling
+|   `-- Scer
+|       |-- logs
+|       |   `-- Scer_H3K4me3_100222_S51_macs2_broadPeak.log
+|       `-- peaks
+|           |-- Scer_H3K4me3_100222_S51_peaks.broadPeak
+|           `-- Scer_H3K4me3_100222_S51_peaks_broadPeak.xls
+|-- QC
+|   |-- peakSummary_Scer_H3K4me3_100222_S51.txt
+|   |-- summaryAlign_Scer_H3_170222_S93.txt
+|   `-- summaryAlign_Scer_H3K4me3_100222_S51.txt
+`-- temp
+    |-- pipelineStep_Scer_H3_170222_S93.txt
+    `-- pipelineStep_Scer_H3K4me3_100222_S51.txt
