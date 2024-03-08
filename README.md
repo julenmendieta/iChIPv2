@@ -28,7 +28,8 @@ Comma separated file with 3 mandatory + 1 optional columns:
 | **fastq_2**     | FastQ file name for Illumina short reads 2. File has to be gzipped     |  
 | **refID** | ID to be linked with a reference genome in the Genome Samplesheet    |
 | newName (optional) |  In case you want to name output files using this label instead of file name    |
-
+  
+This file is made once you have located the FASTQ.gz files to analyze.
  ```bash
 # Trick to create a sample sheet if your files are named as cellID_extra?_S[1-9].R[12]_001.fastq.gz
 # We will link cellID to a reference genome in the "Genome Samplesheet"
@@ -54,6 +55,8 @@ Comma separated file with 2 mandatory columns:
 | **refID**      | Cell or species ID | 
 | **refGenome**     | Path to reference genome fasta file   |  
 
+This file is made once you have located and indexed the reference genomes you will use.
+  
 **NOTE:** All fasta files need to have Bowtie2 and Samtools indexes. How to get them:
 ```bash
 # Bowtie2 index
@@ -69,8 +72,9 @@ Comma-separated file with 3 mandatory columns. Each "inPath" folder must only co
 | **inPath**      | Path to folder containing BAM files to be analysed | 
 | **controlFile**     | Full name of the control bamfile (input, IgG, H3, etc.) for all the samples in **inPath** folder   |  
 | **refID** | ID to be linked with a reference genome in the Genome Samplesheet  |
-
-
+  
+This file is made after the alignment step, once you have linked/moved your BAM files to a species-specific folder.  
+  
 # Running the scripts
 ## Test run
 Once dependencies are installed, make sure the pipeline works by running `pending` with sample data:
