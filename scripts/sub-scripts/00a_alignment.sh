@@ -72,9 +72,11 @@ echo -e "refID: ${refID}\nnewName: ${newName}"
 if [ -z "${fastq_1}" ]; then 
     echo "ERROR: Sample file issue with fastq_1"
     exit 1
+fi
 if [ -z "${fastq_2}" ]; then 
     echo "ERROR: Sample file issue with fastq_2"
     exit 1
+fi
 if [ -z "${refID}" ]; then 
     echo "ERROR: Sample file issue with refID"
     exit 1
