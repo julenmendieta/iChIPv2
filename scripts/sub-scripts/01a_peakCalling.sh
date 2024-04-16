@@ -10,6 +10,9 @@ genomeS=$2
 out_dir=$3
 # Alignment file index to select fastq files
 chipLine=$4
+# Path to conda environment folder
+condaEnv=$5
+
 
 # Set to "Yes" to delete MACS2 log files (${out_dir}/peakCalling/${mainLabel}/logs/)
 # Were ${mainLabel} is the name of the folder containing the BAM files
@@ -53,16 +56,31 @@ fileNotExistOrOlder () {
 
 ##==============================================================================
 
+##################################  Checks   ###################################
+# Make sure the input shamplesheet files format is correct
+maxSection=$(awk -F ',' 'NF > maxNF {maxNF = NF} END {print maxNF+0}' ${peakS})
+if [[ ${maxSection} == 3 ]] ; then 
+    echo -e "Peak samplesheet has correct number of comma separated columns"
+else
+    echo -e "\nERROR: Peak samplesheet format might be WRONG";
+    echo -e "Maximum number of comma separated sections is ${maxSection}, when should be 3\n";
+    exit 1;
+fi
 
 ##############################   GETING READY   ################################
 
+# Load conda environment
+#conda activate ${condaEnv}
+export PATH="${condaEnv}:$PATH"
+
 # Get alignment file index in case this is a job from a queueing system
-# If not Slurm or Torque we asume its a number with the line from ${peakS}
+# If not Slurm or SGE we asume its a number with the line from ${peakS}
 if [[ ${chipLine} == "Slurm" ]]; then 
     chipLine=$SLURM_ARRAY_TASK_ID
-elif [[ ${jobMode} == "Torque" ]]; then
-    echo "Pending to be done"
-    exit 1
+elif [[ ${chipLine} == "SGE" ]]; then
+    chipLine=$SGE_TASK_ID
+    echo "TASK ID"
+    echo $SGE_TASK_ID
 fi
 
 # Get alignment input info
@@ -78,15 +96,15 @@ echo -e "refID: ${refID}"
 
 ## Step control to make sure we have input info
 if [ -z "${inPath}" ]; then 
-    echo "ERROR: Sample file issue with fastq_1";
+    echo "ERROR: Sample file issue with inPath, empty/null variable";
     exit 1;
 fi
 if [ -z "${controlFile}" ]; then 
-    echo "ERROR: Sample file issue with fastq_2";
+    echo "ERROR: Sample file issue with controlFile, empty/null variable";
     exit 1;
 fi
 if [ -z "${refID}" ]; then 
-    echo "ERROR: Sample file issue with refID";
+    echo "ERROR: Sample file issue with refID, empty/null variable";
     exit 1;
 fi
 
@@ -107,7 +125,15 @@ allbams=$(find ${inPath}/*bam -printf "${inPath}/%f\n" | \
 allLabels=`for i in $allbams; do basename ${i} | cut -d '.' -f 1 \
                 ; done | tr '\n' ' '`
 
-controlbam="${inPath}/${controlFile}"
+# Store path to control file and deal with cases in which user provides path instead of name
+if [ "${controlFile:0:1}" = "/" ]; then
+     echo -e "\nWARNING: 'controlFile' should be a file name within inPath"
+     echo -e "Anyways, we will use the provided file path to look for the control BAM file\n"
+     controlbam="${controlFile}"
+     controlFile=$(basename $controlFile)
+else
+    controlbam="${inPath}/${controlFile}"
+fi
 controlLabel=$(echo ${controlFile} | cut -d '.' -f 1)
 
 # Get the name of the folder containing the BAM files
@@ -165,7 +191,7 @@ for bam in ${allbams}; do
             echo
 
             if [[ $total_reads == "empty" ]]; then
-                total_reads=$(samtools view -c ${bam})
+                total_reads=$(sambamba view -c ${bam})
             fi
 
             macs2 callpeak \
@@ -189,7 +215,7 @@ for bam in ${allbams}; do
             reads_in_peaks=$(bedtools sort -i \
                 ${out_dir}/peakCalling/${mainLabel}/peaks/${label}_peaks.${peaktype} \
                 | bedtools merge -i stdin | bedtools intersect -u -nonamecheck \
-                -a ${bam} -b stdin -ubam | samtools view -c)
+                -a ${bam} -b stdin -ubam | sambamba view -c /dev/stdin)
             FRiP=$(awk "BEGIN {print "${reads_in_peaks}"/"${total_reads}"}")
             # report
             echo -e "NUMBER OF BROAD PEAKS\t${npeaks}" >> ${summaryFile}

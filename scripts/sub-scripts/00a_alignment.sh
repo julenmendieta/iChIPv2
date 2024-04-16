@@ -12,6 +12,8 @@ out_dir=$3
 nCPU=$4 
 # Alignment file index to select fastq files
 alignLine=$5
+# Path to conda environment folder
+condaEnv=$6
 
 # Set to "Yes" to remove temporal files
 cleanUp="Yes"
@@ -29,16 +31,43 @@ trap 'echo "\"${last_command}\" command failed with exit code $?."' EXIT
 
 ##===============================================================================
 
+##################################  CHECK   ####################################
+
+# Make sure the input shamplesheet files format is correct
+## Alignment
+maxSection=$(awk -F ',' 'NF > maxNF {maxNF = NF} END {print maxNF+0}' ${alignS})
+if [[ ${maxSection} == 3 ]] || [[ ${maxSection} == 4 ]]; then 
+    echo "Alignment samplesheet has correct number of comma separated columns"
+else
+    echo -e "\nERROR: Alignment samplesheet format might be WRONG";
+    echo -e "Maximum number of comma separated sections is ${maxSection}, when should be 3 or 4\n";
+    exit 1;
+fi
+## Genome
+maxSection=$(awk -F ',' 'NF > maxNF {maxNF = NF} END {print maxNF+0}' ${genomeS})
+if [[ ${maxSection} == 2 ]]; then 
+    echo "Genome samplesheet has correct number of comma separated columns"
+else
+    echo -e "\nERROR: Genome samplesheet format might be WRONG":
+    echo -e "Maximum number of comma separated sections is ${maxSection}, when should be 2\n";
+    exit 1
+fi
+
+# Load conda environment
+#conda activate ${condaEnv}
+export PATH="${condaEnv}:$PATH"
 
 ##################################   CODE   ####################################
 
 # Get alignment file index in case this is a job from a queueing system
-# If not Slurm or Torque we asume its a number with the line from ${alignS}
+# If not Slurm or SGE we asume its a number with the line from ${alignS}
 if [[ ${alignLine} == "Slurm" ]]; then 
     alignLine=$SLURM_ARRAY_TASK_ID
-elif [[ ${jobMode} == "Torque" ]]; then
-    echo "Pending to be done"
-    exit 1
+elif [[ ${alignLine} == "SGE" ]]; then
+    alignLine=$SGE_TASK_ID
+    echo "TASK ID"
+    echo $SGE_TASK_ID
+
 fi
 
 # Create alignment file folders
@@ -65,8 +94,8 @@ fastq_2=${content[1]}
 refID=${content[2]}
 newName=${content[3]}
 
-echo -e "fastq_1: ${fastq_1}\nfastq_2: ${fastq_2}"
-echo -e "refID: ${refID}\nnewName: ${newName}"
+#echo -e "fastq_1: ${fastq_1}\nfastq_2: ${fastq_2}"
+#echo -e "refID: ${refID}\nnewName: ${newName}"
 
 ## Step control to make sure we have input info
 if [ -z "${fastq_1}" ]; then 
@@ -84,7 +113,8 @@ fi
 
 
 ## Define file label
-if [ ! -z "${newName}" ]; then 
+maxSection=$(echo $alignContent | awk -F ',' 'NF > maxNF {maxNF = NF} END {print maxNF+0}')
+if [[ ${maxSection} == 4 ]]; then 
     fileLabel=${newName};
 else 
     f1=$(basename ${fastq_1})
@@ -108,6 +138,15 @@ for i in $(cat ${genomeS}); do
 
     fi
 done
+# Check if it has bowtie two indexes
+if [ -f "${refGenome}.1.bt2" ]; then
+    echo "Bowtie2 Index file exists"
+else 
+    echo -e "\nERROR. There is no Bowtie 2 Index for ${refGenome}"
+    echo "We would spect to find a file called '${refGenome}.1.bt2' among others"
+    #exit 1
+fi
+
 
 
 # Create step control and ouput info files
