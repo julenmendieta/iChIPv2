@@ -1,37 +1,33 @@
 #!/bin/bash
 # -*- ENCODING: UTF-8 -*-
 
+
 #########################   USER-DEFINED INPUT   ###############################
-
-# Input Paths
-## Path to Peak Calling samplesheet
-peakS="/nfs/users/asebe/cnavarrete/proj/iChIP/new_pipeline/peakCalling_samplesheet.csv"
-## Path to genome samplehseet
-genomeS="/nfs/users/asebe/cnavarrete/proj/iChIP/new_pipeline/genome_samplesheet.csv"
-## Path to Output folder
-out_dir="/nfs/users/asebe/cnavarrete/proj/iChIP/new_pipeline/Nvec_output/"
-## Path to Git repository
-gitP="/nfs/users/asebe/cnavarrete/git_repo/iChIPv2/"
-
-# Input parameters
-## No multithread in peak calling step with MACS2
-#nCPU=1  
-## Conda environmnet name to be loaded. Path to env bin folder
-# You can find it by loading the environmnet "conda activate iChIPv2"
-# and then executing:
-# which python | sed "s/\/python//g"
-condaEnv="/nfs/users/asebe/cnavarrete/miniconda3/envs/iChIPv2/bin/"
-## Variable to define how to run the alignment, either by queuing sustem
-## or each sample at a time
-## Set it to "Slurm", "SGE", or "noQueue"
-jobMode="SGE"
+# Path to config file
+configFile=$1
+#configFile=/nfs/users/asebe/cnavarrete/proj/iChIP/fastq_sel/Scer_reads/configFile.txt
 
 #################################  HOW TO RUN ME  ##############################
-#bash /home/jmendietaes/programas/iChIPv2/scripts/01_peakCallingLauncher.sh
+#bash /nfs/users/asebe/cnavarrete/git_repo/iChIPv2/scripts/01_peakCallingLauncher.sh /nfs/users/asebe/cnavarrete/proj/iChIP/fastq_sel/Scer_reads/configFile.txt
 
+
+
+
+#############   LOAD USER-DEFINED VARIABLES IN CONFIG   ########################
+# make sure the user didn't add a new non-commented line
+nVariable=$(grep -vE '^(\s*$|#)' ${configFile} | wc -l)
+if [[ ${nVariable} == 8 ]] ; then 
+    echo "Config File has correct number of variables/non-commented lines"
+else
+    echo -e "\nERROR: Config File format is WRONG";
+    echo -e "Maximum number of allowed variables/non-commented lines is ${nVariable}, when should be 8\n";
+    exit 1;
+fi
+
+source ${configFile}
 ##################################   CODE   ####################################
 # Get number of files to align (header row has to be removed)
-nJobs=$(wc -l ${peakS} | awk '{print $1'})
+nJobs=$(wc -l ${sample_table} | awk '{print $1'})
 nJobs=$((${nJobs} - 1))
 
 # Purge current modules before starting job (comment it if no module system is
@@ -42,29 +38,32 @@ module purge
 #conda activate ${condaEnv}
 export PATH="${condaEnv}:$PATH"
 
-
-# Remove from samplesheets newline characters that might come from working 
+# Remove from Sample table newline characters that might come from working 
 # with excel
-sed -i 's/\r$//' ${peakS}
+sed -i 's/\r$//' ${sample_table}
 
-if [[ ${jobMode} == "Slurm" ]]; then 
+# Get a temporal Sample table without controls
+sample_table_tmp=${out_dir}/temp/sampleT_noControls.tsv
+awk '$5 !~ /Y/' ${sample_table} > ${sample_table_tmp}
+
+if [[ ${jobMode} == "queue" ]]; then 
     
-    sbatch --array=1-${nJobs} --job-name=iChIP-peakCall --cpus-per-task=1 \
-        --mem=30G --time=00-08:00:00 -p short \
-        ${gitP}/scripts/sub-scripts/01a_peakCalling.sh \
-        ${peakS} ${genomeS} ${out_dir} ${jobMode} ${condaEnv}
+    # Slurm example
+    # sbatch --array=1-${nJobs} --job-name=iChIP-peakCall --cpus-per-task=1 \
+    #     --mem=30G --time=00-08:00:00 -p short \
+    #     ${gitP}/scripts/sub-scripts/01a_peakCalling.sh \
+    #     ${sample_table_tmp} ${genome_table}${out_dir} ${jobMode} ${condaEnv}
 
-elif [[ ${jobMode} == "SGE" ]]; then
-
+    # SGE example
     qsub -t 1-${nJobs} -N iChIP-peakCall \
          -q long-centos79,mem_512 \
          ${gitP}/scripts/sub-scripts/01a_peakCalling.sh \
-         ${peakS} ${genomeS} ${out_dir} ${jobMode} ${condaEnv}
+         ${sample_table_tmp} ${genome_table} ${out_dir} ${jobMode} ${condaEnv}
 
 elif [[ ${jobMode} == "noQueue" ]]; then 
     for nj in $(seq 1 ${nJobs}); do
         bash ${gitP}/scripts/sub-scripts/01a_peakCalling.sh \
-            ${peakS} ${genomeS} ${out_dir} ${nj} ${condaEnv}
+            ${sample_table_tmp} ${genome_table} ${out_dir} ${nj} ${condaEnv}
     done
 
 else

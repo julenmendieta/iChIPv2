@@ -1,0 +1,6 @@
+sample_id	fastq_1	fastq_2	sps_id	is.control	control
+Scer_H4K4me3_290921_S17	Scer_H4K4me3_290921_S17_R1_001.fastq.gz	Scer_H3K4me3_290921_S17_R2_001.fastq.gz	Scer	N	Scer_H3_170222_S93
+Scer_H3K36me3	Scer_H3K36me3_191121_S18_R1_001.fastq.gz,Scer_H3K36me3_301121_S55_R1_001.fastq.gz	Scer_H3K36me3_191121_S18_R2_001.fastq.gz,Scer_H3K36me3_301121_S55_R2_001.fastq.gz	Scer	N	Scer_H3_170222_S93
+Scer_H3_170222_S93	Scer_H3_170222_S93_R1_001.fastq.gz	Scer_H3_170222_S93_R2_001.fastq.gz	Scer	Y	
+Scer_H3K36me3_301121_S55	Scer_H3K36me3_301121_S55_R1_001.fastq.gz	Scer_H3K36me3_301121_S55_R2_001.fastq.gz	Scer	N
+Scer_H3K4me3_100222_S51	Scer_H3K4me3_100222_S51_R1_001.fastq.gz	Scer_H3K4me3_100222_S51_R2_001.fastq.gz	Scer	N	

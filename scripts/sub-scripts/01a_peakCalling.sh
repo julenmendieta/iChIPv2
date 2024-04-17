@@ -3,9 +3,9 @@
 #########################   INPUT PARAMETERS  #############################
 
 # Path to alignment samplesheet
-peakS=$1
+sample_table=$1
 # Path to genome samplehseet
-genomeS=$2
+genome_table=$2
 # Path to Output folder
 out_dir=$3
 # Alignment file index to select fastq files
@@ -14,11 +14,11 @@ chipLine=$4
 condaEnv=$5
 
 
-# Set to "Yes" to delete MACS2 log files (${out_dir}/peakCalling/${mainLabel}/logs/)
-# Were ${mainLabel} is the name of the folder containing the BAM files
+# Set to "Yes" to delete MACS2 log files (${out_dir}/peakCalling/${sps_id}/logs/)
+# Were ${sps_id} is the ID of the species
 cleanLogs="No"
 # Set to "Yes" to delete MACS2 gappedPeak (only keep MACS2 xls and BED6+4 files)
-# (${out_dir}/peakCalling/${mainLabel}/peaks)
+# (${out_dir}/peakCalling/${sps_id})
 cleanGapped="Yes"
 
 #################################   EXTRA   ####################################
@@ -57,13 +57,13 @@ fileNotExistOrOlder () {
 ##==============================================================================
 
 ##################################  Checks   ###################################
-# Make sure the input shamplesheet files format is correct
-maxSection=$(awk -F ',' 'NF > maxNF {maxNF = NF} END {print maxNF+0}' ${peakS})
-if [[ ${maxSection} == 3 ]] ; then 
-    echo -e "Peak samplesheet has correct number of comma separated columns"
+# Make sure the input Sample table file format is correct
+maxSection=$(awk -F '\t' 'FNR>1 && NF > maxNF {maxNF = NF} END {print maxNF+0}' ${sample_table})
+if [[ ${maxSection} == 6 ]]; then 
+    echo "Sample table has correct number of TAB separated columns"
 else
-    echo -e "\nERROR: Peak samplesheet format might be WRONG";
-    echo -e "Maximum number of comma separated sections is ${maxSection}, when should be 3\n";
+    echo -e "\nERROR: Sample table format might be WRONG";
+    echo -e "Maximum number of TAB separated sections is ${maxSection}, when should be 6\n";
     exit 1;
 fi
 
@@ -74,80 +74,113 @@ fi
 export PATH="${condaEnv}:$PATH"
 
 # Get alignment file index in case this is a job from a queueing system
-# If not Slurm or SGE we asume its a number with the line from ${peakS}
-if [[ ${chipLine} == "Slurm" ]]; then 
-    chipLine=$SLURM_ARRAY_TASK_ID
-elif [[ ${chipLine} == "SGE" ]]; then
+# If not Slurm or SGE we asume its a number with the line from ${sample_table}
+if [[ ${chipLine} == "queue" ]]; then 
+    # Slurm queue example
+    #chipLine=$SLURM_ARRAY_TASK_ID
+    # SGE queue example
     chipLine=$SGE_TASK_ID
-    echo "TASK ID"
-    echo $SGE_TASK_ID
+
+    # Make sure user set up this correctly
+    ## Define file label
+    if [ -z "${chipLine}" ]; then
+        echo -e "\nERROR: You decided to call the script as jobMode='queue' but \
+the variable to retrieve TASK ID from the job array is NULL";
+        echo -e "Fix it and try again: Line 82 (chipLine) in 01a_peakCaling.sh.\n";
+        exit 1;
+    fi
 fi
 
 # Get alignment input info
 ## Get files to align (this is index 1, so +1 to skip header)
-peakContent=`sed "$((${chipLine} + 1))q;d" ${peakS}`
-content=(${peakContent//,/ })
-inPath=${content[0]}
-controlFile=${content[1]}
-refID=${content[2]}
-
-echo -e "inPath: ${inPath}\ncontrolFile: ${controlFile}"
-echo -e "refID: ${refID}"
+peakContent=`sed "$((${chipLine} + 1))q;d" ${sample_table}`
+content=(${peakContent//\\t/ })
+sample_id=${content[0]}
+sps_id=${content[3]}outGather
+is_control=${content[4]}
+controlFile=${content[5]}
 
 ## Step control to make sure we have input info
-if [ -z "${inPath}" ]; then 
-    echo "ERROR: Sample file issue with inPath, empty/null variable";
+if [ -z "${sample_id}" ]; then 
+    echo "ERROR: Sample file issue with sample_id, empty/null variable";
+    exit 1;
+fi
+if [ -z "${sps_id}" ]; then 
+    echo "ERROR: Sample file issue with sps_id, empty/null variable";
+    exit 1;
+fi
+if [ -z "${is_control}" ]; then 
+    echo "ERROR: Sample file issue with is.control, empty/null variable";
     exit 1;
 fi
 if [ -z "${controlFile}" ]; then 
-    echo "ERROR: Sample file issue with controlFile, empty/null variable";
-    exit 1;
+    echo "WARNING: ControlFile variable is empty/null. We will run peak calling\
+ without background";
 fi
-if [ -z "${refID}" ]; then 
-    echo "ERROR: Sample file issue with refID, empty/null variable";
-    exit 1;
+
+# End job if this is a control
+if [[ ${is_control} == "Y" ]]; then 
+    echo "Ops, we ran a peak calling job for a control. Stoping here...";
+    exit 0;
 fi
 
 # Get reference genome path
-for i in $(cat ${genomeS}); do
-    content=(${i//,/ })
-    refID_=${content[0]}
+nLines=$(wc -l ${genome_table}| awk '{print $1}')
+for i in $(seq 1 ${nLines}); do
+    content=`sed "$((${i}))q;d" ${genome_table}`
+    content=(${content//\\t/ })
+    sps_id_=${content[0]}
     refGenome_=${content[1]}
-    if [[ ${refID} == ${refID_} ]]; then 
+    if [[ ${sps_id} == ${sps_id_} ]]; then 
         refGenome=$(echo ${refGenome_} | tr -d '\r')
 
     fi
 done
 
-# Get a list of BAM files and labels
-allbams=$(find ${inPath}/*bam -printf "${inPath}/%f\n" | \
-            tr '\n' ' ')
-allLabels=`for i in $allbams; do basename ${i} | cut -d '.' -f 1 \
-                ; done | tr '\n' ' '`
-
-# Store path to control file and deal with cases in which user provides path instead of name
-if [ "${controlFile:0:1}" = "/" ]; then
-     echo -e "\nWARNING: 'controlFile' should be a file name within inPath"
-     echo -e "Anyways, we will use the provided file path to look for the control BAM file\n"
-     controlbam="${controlFile}"
-     controlFile=$(basename $controlFile)
-else
-    controlbam="${inPath}/${controlFile}"
-fi
-controlLabel=$(echo ${controlFile} | cut -d '.' -f 1)
-
-# Get the name of the folder containing the BAM files
-mainLabel=$(basename $inPath)
-
-# Create alignment file folders
-if [ ! -e ${out_dir}/peakCalling/${mainLabel}/peaks ]; then
-    mkdir -p ${out_dir}/peakCalling/${mainLabel}/logs
-    mkdir -p ${out_dir}/peakCalling/${mainLabel}/peaks
+# Check if it has bowtie two indexes
+if [ -f "${refGenome}.fai" ]; then
+    echo "Fasta Index file exists"
+else 
+    echo -e "\nERROR. There is no Fasta .fai Index for ${refGenome}"
+    echo "We would spect to find a file called '${refGenome}.fai'"
+    exit 1
 fi
 
+# Get selected bam file for peak calling
+## Main sample
+bamfile="${out_dir}/bam_files/${sps_id}/${sample_id}.q30.rmdup.bam"
+if ! [ -f "${bamfile}" ]; then
+    echo -e "\nERROR: BAM file for ${sample_id}: ${bamfile} doesn't exist"
+    exit 1
+fi
 
-##################################   CODE   ####################################
+## Control
+## Store path to control file and deal with cases in which user provides path 
+## instead of name
+if ! [ -z "${controlFile}" ]; then 
+    if [ "${controlFile:0:1}" = "/" ]; then
+        echo -e "\nWARNING: Control file for peak calling will come from a folder \
+    different from\n${out_dir}/bam_files"
+        echo ${controlFile}
+        controlbam="${controlFile}"
+        controlFile=$(basename $controlFile)
+    else
+        controlbam="${out_dir}/bam_files/${sps_id}/${controlFile}.q30.rmdup.bam"
+    fi
+    if ! [ -f "${controlbam}" ]; then
+        echo -e "\nERROR: BAM file for ${controlFile}: ${controlbam} doesn't exist"
+        exit 1
+    fi
+fi
 
+
+# Create peak calling file folders
+if [ ! -e ${out_dir}/peakCalling/${sps_id}/logs ]; then
+    mkdir -p ${out_dir}/peakCalling/${sps_id}/logs
+fi
+if [ ! -e ${out_dir}/QC/${sps_id} ] ; then
+    mkdir -p ${out_dir}/QC/${sps_id}
+fi
 
 ################################################################################
 # PEAK CALLING: MACS2
@@ -157,76 +190,131 @@ fi
 # Mapping bowtie2
 echo -e "Starting Peak calling ------------------------------------------- \n"
 
-cd ${out_dir}/peakCalling/${mainLabel}/peaks
+cd ${out_dir}/peakCalling/${sps_id}
 
-## we go for each species
-for bam in ${allbams}; do
+# proceed to call peaks for no controls
+summaryFile="${out_dir}/QC/${sps_id}/summaryPeak_${sample_id}.txt"
 
-    label=$(basename $bam | cut -d '.' -f 1)
+# This variable will help you to add code for narrow peak calling as 
+# well while avoiding to get the number of reads twice
+total_reads="empty"
 
-    # proceed to call peaks for no controls
-    if [[ ${controlLabel} != ${label} ]] ; then
-        
-        
-        summaryFile="${out_dir}/QC/peakSummary_${label}.txt"
+# Get reference genome size from Samtools index
+genome_size=$(awk '{SUM+=$2}END{print SUM}' ${refGenome}.fai)
 
-        # This variable will help you to add code for narrow peak calling as 
-        # well while avoiding to get the number of reads twice
-        total_reads="empty"
 
-        # Get reference genome size from Samtools index
-        genome_size=$(awk '{SUM+=$2}END{print SUM}' ${refGenome}.fai)
+## MACS2 narrow peaks
+peaktype="narrowPeak"
+# check if the file exists of it was created with a previous bam version 
+fileNotExistOrOlder "${out_dir}/peakCalling/${sps_id}/${sample_id}_peaks_${peaktype}.xls" \
+                    "${bamfile} ${controlbam}"
+# this outputs analyse as yes or no in lowercase
+if [[ ${analyse} == "yes" ]]; then
+    # echo file and control
+    echo "Bams used for narrow peak calling:"
+    echo ${bamfile}
+    echo ${controlbam}
+    echo
 
-        ## MACS2 broad peaks
-        peaktype="broadPeak"
-        # check if the file exists of it was created with a previous bam version 
-        fileNotExistOrOlder "${out_dir}/peakCalling/${mainLabel}/peaks/${label}_peaks_${peaktype}.xls" \
-                            "${bam} ${controlbam}"
-        # this outputs analyse as yes or no in lowercase
-        if [[ ${analyse} == "yes" ]]; then
-            # echo file and control
-            echo "Bams used for peak calling:"
-            echo $bam
-            echo $controlbam
-            echo
-
-            if [[ $total_reads == "empty" ]]; then
-                total_reads=$(sambamba view -c ${bam})
-            fi
-
-            macs2 callpeak \
-                    -t ${bam} \
-                    -c ${controlbam} \
-                    --broad \
-                    --max-gap 300 \
-                    -f BAMPE \
-                    -g ${genome_size} \
-                    -n $label \
-                    --outdir ${out_dir}/peakCalling/${mainLabel}/peaks 2> \
-                    ${out_dir}/peakCalling/${mainLabel}/logs/${label}_macs2_${peaktype}.log
-            
-            # -q 0.05 as default (at least for broad)
-            mv ${out_dir}/peakCalling/${mainLabel}/peaks/${label}_peaks.xls \
-                ${out_dir}/peakCalling/${mainLabel}/peaks/${label}_peaks_${peaktype}.xls
-
-            npeaks=$(cat \
-                ${out_dir}/peakCalling/${mainLabel}/peaks/${label}_peaks.${peaktype} | \
-                wc -l)
-            reads_in_peaks=$(bedtools sort -i \
-                ${out_dir}/peakCalling/${mainLabel}/peaks/${label}_peaks.${peaktype} \
-                | bedtools merge -i stdin | bedtools intersect -u -nonamecheck \
-                -a ${bam} -b stdin -ubam | sambamba view -c /dev/stdin)
-            FRiP=$(awk "BEGIN {print "${reads_in_peaks}"/"${total_reads}"}")
-            # report
-            echo -e "NUMBER OF BROAD PEAKS\t${npeaks}" >> ${summaryFile}
-            echo -e "total_reads\treads_in_peaks\tFRIP" >> ${summaryFile}
-            echo -e "${total_reads}\t${reads_in_peaks}\t${FRiP}" >> ${summaryFile}
-            echo -e "\n${label}: ${FRiP}" >> ${summaryFile}
-        fi
-
-        
+    if ! [ -z "${controlFile}" ]; then 
+        echo -e "sps_id: ${sps_id}\nout_dir: ${out_dir}" > ${summaryFile}
+        echo -e "bamFile: ${bamfile}\ncontrolBam:${controlFile}\n" >> ${summaryFile}
+    else
+        echo -e "sps_id: ${sps_id}\nout_dir: ${out_dir}" > ${summaryFile}
+        echo -e "bamFile: ${bamfile}\ncontrolBam: None\n" >> ${summaryFile}
     fi
-done
+
+    if [[ ${total_reads} == "empty" ]]; then
+        # This also gets orphan reads, so the number might be different to
+        # the values from the previous scripts, that looks for aligned pairs
+        total_reads=$(sambamba view -c ${bamfile})
+    fi
+
+    macs2 callpeak \
+            -t ${bamfile} \
+            -c ${controlbam} \
+            --max-gap 300 \
+            -f BAMPE \
+            -g ${genome_size} \
+            -n ${sample_id} \
+            --outdir ${out_dir}/peakCalling/${sps_id} 2> \
+            ${out_dir}/peakCalling/${sps_id}/logs/${sample_id}_macs2_${peaktype}.log
+    
+    # -q 0.05 as default (at least for broad)
+    mv ${out_dir}/peakCalling/${sps_id}/${sample_id}_peaks.xls \
+        ${out_dir}/peakCalling/${sps_id}/${sample_id}_peaks_${peaktype}.xls
+
+    npeaksNarrow=$(cat \
+        ${out_dir}/peakCalling/${sps_id}/${sample_id}_peaks.${peaktype} | \
+        wc -l)
+    reads_in_peaksNarrow=$(bedtools sort -i \
+        ${out_dir}/peakCalling/${sps_id}/${sample_id}_peaks.${peaktype} \
+        | bedtools merge -i stdin | bedtools intersect -u -nonamecheck \
+        -a ${bamfile} -b stdin -ubam | sambamba view -c /dev/stdin)
+    FRiP_narrow=$(awk "BEGIN {print "${reads_in_peaksNarrow}"/"${total_reads}"}")
+    # report
+    echo -e "sampleName\tN_narrowPeak\tnarrowFRiP" >> ${summaryFile}
+    echo -e "${sample_id}\t${npeaksNarrow}\t${FRiP_narrow}" >> ${summaryFile}
+ 
+fi
+
+
+## MACS2 broad peaks
+peaktype="broadPeak"
+# check if the file exists of it was created with a previous bam version 
+fileNotExistOrOlder "${out_dir}/peakCalling/${sps_id}/${sample_id}_peaks_${peaktype}.xls" \
+                    "${bamfile} ${controlbam}"
+# this outputs analyse as yes or no in lowercase
+if [[ ${analyse} == "yes" ]]; then
+    # echo file and control
+    echo "Bams used for broad peak calling:"
+    echo ${bamfile}
+    echo ${controlbam}
+    echo
+
+    if [[ ${total_reads} == "empty" ]]; then
+        total_reads=$(sambamba view -c ${bamfile})
+    fi
+
+    macs2 callpeak \
+            -t ${bamfile} \
+            -c ${controlbam} \
+            --broad \
+            --max-gap 300 \
+            -f BAMPE \
+            -g ${genome_size} \
+            -n ${sample_id} \
+            --outdir ${out_dir}/peakCalling/${sps_id} 2> \
+            ${out_dir}/peakCalling/${sps_id}/logs/${sample_id}_macs2_${peaktype}.log
+    
+    # -q 0.05 as default (at least for broad)
+    mv ${out_dir}/peakCalling/${sps_id}/${sample_id}_peaks.xls \
+        ${out_dir}/peakCalling/${sps_id}/${sample_id}_peaks_${peaktype}.xls
+
+    npeaksBroad=$(cat \
+        ${out_dir}/peakCalling/${sps_id}/${sample_id}_peaks.${peaktype} | \
+        wc -l)
+    reads_in_peaksBroad=$(bedtools sort -i \
+        ${out_dir}/peakCalling/${sps_id}/${sample_id}_peaks.${peaktype} \
+        | bedtools merge -i stdin | bedtools intersect -u -nonamecheck \
+        -a ${bamfile} -b stdin -ubam | sambamba view -c /dev/stdin)
+    FRiP_broad=$(awk "BEGIN {print "${reads_in_peaksBroad}"/"${total_reads}"}")
+    # report
+    echo -e "sampleName\tN_broadPeak\tbroadFRiP" >> ${summaryFile}
+    echo -e "${sample_id}\t${npeaksBroad}\t${FRiP_broad}" >> ${summaryFile}
+    
+fi
+
+# Get maximum FRiP value
+FRiP_narrow=$(grep -A 1 "narrowFRiP" ${summaryFile} | tail -n 1 | \
+                awk '{print $3}')
+FRiP_broad=$(grep -A 1 "broadFRiP" ${summaryFile} | tail -n 1 | \
+                awk '{print $3}')
+if (( $(echo "$FRiP_narrow >= $FRiP_broad" |bc -l) )); then
+    echo -e "\nmaxFRiP: narrowFRiP = ${FRiP_narrow}" >> ${summaryFile}
+else
+    echo -e "\nmaxFRiP: broadFRiP = ${FRiP_broad}" >> ${summaryFile}
+fi
 
 echo -e "Peak calling - finished ------------------------------------------\n"
 
@@ -237,11 +325,15 @@ echo -e "Peak calling - finished ------------------------------------------\n"
 
 if [[ ${cleanLogs} == "Yes" ]]; then 
     echo -e "Deleting Log files ----------------------------------------- \n"
-    rm ${out_dir}/peakCalling/${mainLabel}/logs/*.log
+    if [ -f "${out_dir}/peakCalling/${sps_id}/logs/${sample_id}_macs2_${peaktype}.log" ]; then
+        rm ${out_dir}/peakCalling/${sps_id}/logs/${sample_id}_macs2_${peaktype}.log
+    fi
 fi
 if [[ ${cleanGapped} == "Yes" ]]; then 
     echo -e "Deleting Gapped files -------------------------------------- \n"
-    rm ${out_dir}/peakCalling/${mainLabel}/peaks/*.gappedPeak
+    if [ -f "${out_dir}/peakCalling/${sps_id}/*.gappedPeak" ]; then
+        rm ${out_dir}/peakCalling/${sps_id}/${sample_id}_peaks.gappedPeak
+    fi
 fi
 
 ################################################################################

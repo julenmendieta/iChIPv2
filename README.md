@@ -3,7 +3,7 @@
 !['anyImage?'](./img/logo.png)
 
 This pipeline shows the steps followed in (--paper--) to process iChIPv2 data from Fastq files to peak coordinates and further analysis.
-It takes as input Fastq files and reference genomes and organises the data by the use of 3 Samplesheets: i) reference genomes, ii) fastq files info, and iii) peak calling info.
+It takes as input Fastq files and reference genomes and organises the data using 2 Sample tables and a config file defined below.
 
 # Installation  
 If you don't have it yet, first start by installing Conda [Miniforge](https://github.com/conda-forge/miniforge#miniforge).
@@ -18,42 +18,15 @@ conda env create -n iChIPv2 -f iChIPv2_environment.yml
 conda activate iChIPv2
 ```
 
-# Sample sheets format
-File examples [here](examples/sampleSheets)
-## 1. Alignment Samplesheet
-Comma separated file with 3 mandatory + 1 optional columns:  
+# Sample tables format
+File examples [here](examples/sampleTables/)
+
+## 1. Genome table
+Tab (\t) separated file with 2 mandatory columns:  
 | Column ID        | Description          | 
 | ------------- |:-------------:|
-| **fastq_1**      | FastQ file name for Illumina short reads 1. File has to be gzipped | 
-| **fastq_2**     | FastQ file name for Illumina short reads 2. File has to be gzipped     |  
-| **refID** | ID to be linked with a reference genome in the Genome Samplesheet    |
-| newName (optional) |  In case you want to name output files using this label instead of file name    |
-  
-This file is made once you have located the FASTQ.gz files to analyze.
- ```bash
-# Trick to create a sample sheet if your files are named as cellID_extra?_S[1-9].R[12]_001.fastq.gz
-# We will link cellID to a reference genome in the "Genome Samplesheet"
-# Command to be run inside the folder containing the Fastq.gz files
-# Examples: Nvec_H3K36me3_301121_S27_R1_001.fastq.gz & Nvec_H3K36me3_301121_S27_R2_001.fastq.gz
-for i in *fastq.gz; do
-    echo $i | sed 's/_R._001.fastq.gz//g' ;
-done | sort | uniq > samplesNames.txt
-
-echo "fastq_1,fastq_2,refID" > alignment_samplesheet.csv ;
-for i in $(cat samplesNames.txt); do 
-    f1=$(find $PWD -name "${i}_R1_001.fastq.gz");
-    f2=$(find $PWD -name "${i}_R2_001.fastq.gz");
-    refID=(${i/_/ }); refID=${refID[0]};
-    echo "${f1},${f2},${refID}";
-done >> alignment_samplesheet.csv
-```
-
-## 2. Genome Samplesheet
-Comma separated file with 2 mandatory columns:  
-| Column ID        | Description          | 
-| ------------- |:-------------:|
-| **refID**      | Cell or species ID | 
-| **refGenome**     | Path to reference genome fasta file   |  
+| **sps_id**      | species identifier to be linked to samples as indicated in "Sample table" (e.g. Scer) | 
+| **genome_file**     | full path to genome fasta file (NOTE: should be the same file basename used to generate the bowtie2 and fasta indexes, see instructions)   |  
 
 This file is made once you have located and indexed the reference genomes you will use.
   
@@ -65,16 +38,26 @@ bowtie2-build SPECIES-REF-GENOME.fasta
 samtools faidx SPECIES-REF-GENOME.fasta
 ```
 
-## 3. Peak calling Samplesheet
-Comma-separated file with 3 mandatory columns. Each "inPath" folder must only contain files for the same species:  
+## 2. Sample table
+Tab (\t) separated file with 6 mandatory columns:  
 | Column ID        | Description          | 
 | ------------- |:-------------:|
-| **inPath**      | Path to folder containing BAM files to be analysed | 
-| **controlFile**     | Full name of the control bamfile (input, IgG, H3, etc.) for all the samples in **inPath** folder   |  
-| **refID** | ID to be linked with a reference genome in the Genome Samplesheet  |
+| **sample_id**      | unique identifier for the ChIP-seq sample (e.g. Scer_H3K36me3_rep1) | 
+| **fastq_1**      | comma-separated list of gzipped fastq files corresponding to read_1 | 
+| **fastq_2**     | comma-separated list of gzipped fastq files corresponding to read_2     |  
+| **sps_id** | species identifier to be linked to reference genome as indicated in "Genome table" (e.g. Scer)    |  
+| **is.control** | whether the sample is to be used as control (e.g. H3 or sequenced input DNA). Possible values: Y/N    |  
+| **control** | sample to be used as background control for peak calling. Possible values: sample_id within the same experiment, full path to an existing bam file, empty (in this case, peak calling will be done without background sample option)    |  
   
-This file is made after the alignment step, once you have linked/moved your BAM files to a species-specific folder.  
-  
+This file is made once you have located the FASTQ.gz files to analyze.
+
+# Config file format
+File example [here](examples/configFile.sh)
+This file is formatted as a bash script with all the needed input variables for the pipeline. It will be sourced in all the script to load the variable values, hence, i) don't remove the `#!/usr/bin/env bash` string from the first line, ii) add your own comments (if you ever do it) on lines starting with a `#`, iii) give a proper value to all the defined variables, and always follow [bash syntax](http://www.compciv.org/topics/bash/variables-and-substitution/)
+
+VARIABLE DESCRIPTION TO BE ADDED  
+
+
 # Running the scripts
 ## Test run
 Once dependencies are installed, make sure the pipeline works by running `pending` with sample data:
@@ -84,12 +67,15 @@ Code to run test
 ```
 
 ## Run it with your own data
-### 1. Create the Samplesheet files
-Create the Samplesheet files and move them (or not) to a preferred location.
+### 1. Create the Sample table and config files
+Create the Sample table and config files and move them (or not) to a preferred location.
 
 ### 2. Run alignment
-Open 00_alignmentLauncher.sh script and modify the variables in USER-DEFINED INPUT and the queuing system parameters if needed. Then execute it with bash or within a cluster job (only valid for "noQueue" mode).  
-The script has code that works in Slurm and (Torque FUTURE) queueing systems. However, if it is set to "noQueue", all the files in the Alignment Samplesheet will be aligned one after the other without parallelization. This is the only approach to use if you run the analysis on a computer without a queueing system and the best one to use if our code to run jobs is not working in your system. If so, you can always create multiple Alignment Samplesheets and run them through your queuing system in "noQueue" mode.
+Locate the config file and execute 00_alignmentLauncher.sh script including the path as an input
+```bash
+bash 00_alignmentLauncher.sh /PATH/TO/configFile.sh
+```
+If you chose "noQueue" mode in the config file, you can execute as a job for your clusters queuing system. In this mode, all the files in the Sample table will be aligned one after the other without parallelization. This is the only approach to use if you run the analysis on a computer without a queueing system and the best one to use if you are not very familiar with Linux and/or queuing systems. 
 
 Output files:  
 -BAM files --> ${out_dir}/bam_files  
@@ -97,26 +83,28 @@ Output files:
 -Alignment information files --> ${out_dir}/QC  
 -Alignment step files (to restart broken runs) and temporal files -->  ${out_dir}/temp  
   
-Note that we store a file named "pipelineStep_${fileLabel}.txt" in "${out_dir}/temp". This file contains one ID for each successful pipeline step and must be deleted if, for any reason, we want to re-start from zero the alignment of a given file or align files with the same name as previously analyzed ones. 
+Note that we store a file named "pipelineStep_${fileLabel}.txt" in "${out_dir}/temp". This file contains one ID for each successful pipeline step and must be deleted if, for any reason, we want to re-start from zero the alignment of a given file or align files with the same sample_id as previously analyzed ones. 
 
-### 3. Check the alignment output
-Take a look at your data and discard failed experiments. Once you're sure to continue ahead with the peak calling, we recommend moving the bam files to "${out_dir}/bam_files/valid/all". Then, create a species-specific folder in "${out_dir}/bam_files/valid" and link the selected bam files. Example:
+### 3. Run peak calling with MACS2
+Locate the config file and execute 01_peakCallingLauncher.sh script including the path as an input
 ```bash
-out_dir="/PATH/TO/OUTPUT"
-# Create a folder for this set of BAM files. In this case, we call it Scer for Saccharomyces cerevisiae
-mkdir ${out_dir}/bam_files/valid/Scer
-# Link Scer bam files to that folder (will be accessible from there but not duplicated)
-# The link has to be than from inside the destination folder
-cd ${out_dir}/bam_files/valid/Scer
-ln -s ${out_dir}/bam_files/valid/all/Scer* .
+bash 01_peakCallingLauncher.sh /PATH/TO/configFile.sh
 ```
-
-### 4. Run broad peak calling with MACS2
-Open 01_peakCallingLauncher.sh script and modify the variables in USER-DEFINED INPUT and the queueing system parameters if needed. Then execute it with bash or within a cluster job (only valid for "noQueue" mode). The details regarding the queueing system are the same as in the Alignment step.
+This script should only be launched after 00_alignmentLauncher.sh has finished running.
 
 Output files:  
--MACS2 output files are stored in ${out_dir}/peakCalling/${mainLabel}, were ${mainLabel} is the same as the name of the folder containing the analysed BAM files (Scer in our previous example)  
--MACS2 peak files --> ${out_dir}/peakCalling/${mainLabel}/peaks  
--MACS2 Log files --> ${out_dir}/peakCalling/${mainLabel}/logs  
--Per file FRiP values --> ${out_dir}/QC/peakSummary_*.txt  
+-MACS2 peak files are stored in ${out_dir}/peakCalling/${sps_id}  
+-MACS2 Log files --> ${out_dir}/peakCalling/${sps_id}/logs  
+-Per file FRiP values --> ${out_dir}/QC/${sps_id}/summaryPeak_*.txt  
+
+### 4. Run the QC
+Locate the config file and execute 02_generate_QC.sh script including the path as an input
+```bash
+bash 02_generate_QC.sh /PATH/TO/configFile.sh
+```
+This script should only be launched after 01_peakCallingLauncher.sh has finished running.
+
+Output files:  
+-Table with all Alignment and Peak Calling stats --> ${out_dir}/QC/gathered_QC.tsv  
+-Plots showing CPM density distributions of samples and their respective controls, for each ${sps_id} --> ${out_dir}/QC/${sps_id}_cpmDistrib_1kb.pdf
 
