@@ -5,7 +5,7 @@
 #########################   USER-DEFINED INPUT   ###############################
 # Path to config file
 configFile=$1
-#configFile=/nfs/users/asebe/cnavarrete/proj/iChIP/fastq_sel/Scer_reads/configFile.txt
+#configFile=/nfs/users/asebe/cnavarrete/proj/iChIP/fastq_sel/Scer_reads/configFile.sh
 
 #################################  HOW TO RUN ME  ##############################
 #bash /nfs/users/asebe/cnavarrete/git_repo/iChIPv2/scripts/01_peakCallingLauncher.sh /nfs/users/asebe/cnavarrete/proj/iChIP/fastq_sel/Scer_reads/configFile.txt
@@ -26,9 +26,6 @@ fi
 
 source ${configFile}
 ##################################   CODE   ####################################
-# Get number of files to align (header row has to be removed)
-nJobs=$(wc -l ${sample_table} | awk '{print $1'})
-nJobs=$((${nJobs} - 1))
 
 # Purge current modules before starting job (comment it if no module system is
 # installed)
@@ -45,6 +42,10 @@ sed -i 's/\r$//' ${sample_table}
 # Get a temporal Sample table without controls
 sample_table_tmp=${out_dir}/temp/sampleT_noControls.tsv
 awk '$5 !~ /Y/' ${sample_table} > ${sample_table_tmp}
+
+# Get number of files to align (header row has to be removed)
+nJobs=$(wc -l ${sample_table_tmp} | awk '{print $1'})
+nJobs=$((${nJobs} - 1))
 
 if [[ ${jobMode} == "queue" ]]; then 
     

@@ -8,7 +8,7 @@ configFile=$1
 #configFile=/nfs/users/asebe/cnavarrete/proj/iChIP/fastq_sel/Scer_reads/configFile.txt
 
 #################################  HOW TO RUN ME  ##############################
-#bash /nfs/users/asebe/cnavarrete/git_repo/iChIPv2/scripts/00_alignmentLauncher.sh /nfs/users/asebe/cnavarrete/proj/iChIP/fastq_sel/Scer_reads/configFile.txt
+#bash /nfs/users/asebe/cnavarrete/git_repo/iChIPv2/scripts/00_alignmentLauncher.sh /nfs/users/asebe/cnavarrete/proj/iChIP/fastq_sel/Scer_reads/configFile.sh
 
 
 

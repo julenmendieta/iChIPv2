@@ -127,6 +127,7 @@ fripColors = {(0.5, float('inf')):'#08306b',
 # Create output folders
 if not os.path.exists(outplot):
     os.makedirs(outplot)
+if not os.path.exists(outBigW):
     os.makedirs(outBigW)
     
 # Get list of available BAM files

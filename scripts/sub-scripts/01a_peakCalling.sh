@@ -85,7 +85,7 @@ if [[ ${chipLine} == "queue" ]]; then
     ## Define file label
     if [ -z "${chipLine}" ]; then
         echo -e "\nERROR: You decided to call the script as jobMode='queue' but \
-the variable to retrieve TASK ID from the job array is NULL";
+                     the variable to retrieve TASK ID from the job array is NULL";
         echo -e "Fix it and try again: Line 82 (chipLine) in 01a_peakCaling.sh.\n";
         exit 1;
     fi
@@ -96,7 +96,7 @@ fi
 peakContent=`sed "$((${chipLine} + 1))q;d" ${sample_table}`
 content=(${peakContent//\\t/ })
 sample_id=${content[0]}
-sps_id=${content[3]}outGather
+sps_id=${content[3]}
 is_control=${content[4]}
 controlFile=${content[5]}
 
@@ -131,6 +131,7 @@ for i in $(seq 1 ${nLines}); do
     content=(${content//\\t/ })
     sps_id_=${content[0]}
     refGenome_=${content[1]}
+    
     if [[ ${sps_id} == ${sps_id_} ]]; then 
         refGenome=$(echo ${refGenome_} | tr -d '\r')
 

@@ -5,7 +5,7 @@
 #########################   USER-DEFINED INPUT   ###############################
 # Path to config file
 configFile=$1
-#configFile=/nfs/users/asebe/cnavarrete/proj/iChIP/fastq_sel/Scer_reads/configFile.txt
+#configFile=/nfs/users/asebe/cnavarrete/proj/iChIP/fastq_sel/Scer_reads/configFile.sh
 
 #################################  HOW TO RUN ME  ##############################
 #bash /nfs/users/asebe/cnavarrete/git_repo/iChIPv2/scripts/02_generate_QC.sh /nfs/users/asebe/cnavarrete/proj/iChIP/fastq_sel/Scer_reads/configFile.txt
