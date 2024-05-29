@@ -97,7 +97,7 @@ def gaussAreaRight(x0, x1, ax):
     area2 = np.trapz(inters_2, x[cutP1:]) 
     ax.plot(x[cutP1:], inters_2, color='r')
     ax.fill_between(x[cutP1:], inters_2, 0, facecolor='none', 
-                     edgecolor='r', hatch='xx', label='intersection')
+                     edgecolor='r', hatch='xx', label='AreaPass')
 
     handles, labels = ax.get_legend_handles_labels()
     labels[2] += f': {area2 * 100:.1f} %'
@@ -133,6 +133,12 @@ if not os.path.exists(outBigW):
 # Get list of available BAM files
 species = [f for f in os.listdir(inPath) if os.path.isdir(f"{inPath}/{f}")]
 
+##################################
+# Load Sample data table
+##################################
+df_data = pd.read_table(sample_table)
+pos_control = df_data['is.control'] == "Y"
+df_data["factor"] = df_data["sample_id"].str.split('_').str[1]
 
 ##################################
 # Get bigwigs at given resolution
@@ -147,6 +153,24 @@ for sps_id in species:
                 -b {inPath}/{sps_id}/{fi} -of bigwig \
                 -o {outBigW}/{sps_id}__{fi[:-3]}bw --numberOfProcessors {nCPU}"
             _ = runCommand(cmd)
+
+# In case we have external controls, get the ones with full path
+allControlsPath = df_data[["sps_id", "control"]].drop_duplicates()
+allControlsPath = allControlsPath[allControlsPath["control"].isnull() == False]
+allControlsPath = allControlsPath[allControlsPath['control'].apply(
+                                        lambda x:os.path.isabs(x))]
+#allControlsPath = allControlsPath.set_index('sps_id')['control'].to_dict()
+for idx in allControlsPath.index:
+    sps_id = allControlsPath.loc[idx, "sps_id"]
+    fi = allControlsPath.loc[idx, "control"]
+    basefi = os.path.basename(fi)
+    if not os.path.exists(f"{outBigW}/{sps_id}__{basefi[:-3]}bw"):
+        print(f"\n{basefi} -- ")
+        cmd = f"{condaEnv}/bamCoverage --binSize {resolution} \
+            --normalizeUsing CPM --exactScaling \
+            -b {fi} -of bigwig \
+            -o {outBigW}/{sps_id}__{basefi[:-3]}bw --numberOfProcessors {nCPU}"
+        _ = runCommand(cmd)
 
 
 ##################################
@@ -166,13 +190,7 @@ dupRate = {}
 for id1 in df_stats.index:
     dupRate[id1] = round(float(df_stats.loc[id1, "dupRate"].split("%")[0]), 2)
     dupRate[id1] = f"{dupRate[id1]}%"
-##################################
-# Load Sample data table
-##################################
-df_data = pd.read_table(sample_table)
-pos_control = df_data['is.control'] == "Y"
-controls = list(df_data.loc[pos_control, "sample_id"])
-df_data["factor"] = df_data["sample_id"].str.split('_').str[1]
+
 
 ##################################
 # Get read counts 
@@ -210,10 +228,16 @@ for sps_id in species:
     chips = sorted(list(set(df_data.loc[pos_chips, "factor"])))
     
     # Get the counts for all the controls we are going to use
-    allControls = [c for c in df_data.loc[pos_chips, "control"] if ((c == c) & (c is not None))]
+    allControls = list(set([c for c in df_data.loc[pos_chips, "control"] 
+                        if ((c == c) & (c is not None))]))
     controlCounts = {}
     for ctrl in allControls:
-        bw1 = pyBigWig.open(f"{outBigW}/{IDs[ctrl]}")
+        # If we're dealing with an external control
+        if os.path.isabs(ctrl):
+            baseCtrol = os.path.basename(ctrl)
+            bw1 = pyBigWig.open(f"{outBigW}/{IDs[baseCtrol.split('.')[0]]}")
+        else:
+            bw1 = pyBigWig.open(f"{outBigW}/{IDs[ctrl]}")
         controlCounts[ctrl] = []
         useChroms = list(bw1.chroms().keys())
         for chrom in useChroms:
@@ -233,19 +257,15 @@ for sps_id in species:
         for bw in bws:
             # get plot color
             id1 = IDs_rev[bw]
-            if sps_id in FripData:
-                if id1 in FripData[sps_id]:
-                    frip = FripData[sps_id][id1]
-                    frips[bw] = round(frip, 3)
-                    for fp in fripColors:
-                        if fp != 'noFrip':
-                            if fp[0] <= frip < fp[1]:
-                                colors[bw] = fripColors[fp]
-                else:
-                    print(f"{id1} not in FripData")
-                    colors[bw] = fripColors['noFrip']
-                    frips[bw] = 'NA'
+            if id1 in FripData:
+                frip = FripData[id1]
+                frips[bw] = round(frip, 3)
+                for fp in fripColors:
+                    if fp != 'noFrip':
+                        if fp[0] <= frip < fp[1]:
+                            colors[bw] = fripColors[fp]
             else:
+                print(f"{id1} not in FripData")
                 colors[bw] = fripColors['noFrip']
                 frips[bw] = 'NA'
             
@@ -268,11 +288,16 @@ for sps_id in species:
         fig, ax = plt.subplots(1,nbw, figsize=(5*nbw , 5))
         if nbw == 1:
             id1 = IDs_rev[bws[0]]
-            if IDs_rev[bws[0]] in controlCounts:
-                x0 = np.array(np.log2(controlCounts[IDs_rev[bws[0]]]))
+            # Find matching control
+            pos = df_data['sample_id'] == IDs_rev[bws[0]]
+            controlID = df_data.loc[pos, "control"].item()
+            if controlID in controlCounts:
+                x0 = np.array(np.log2(controlCounts[controlID]))
             # No control specified for this file
             else:
                 print(f"No control specified for {id1}")
+                print(controlID)
+                print()
                 x0 = np.array([0, 1])
             x1 = np.array(np.log2(counts[bws[0]]))
             areas[id1] = gaussAreaRight(x0, x1, ax)
@@ -281,14 +306,23 @@ for sps_id in species:
             title += f"\nmaxFRiP: {FripData[id1]}, reads: {allBamReads[id1]:,}"
             title += f"\n%Dupli:{dupRate[id1]}, AreaPass: {areas[id1]}"
             ax.set_title(title)
+            # Identify labels
+            ax.set_ylabel("KDE")
+            ax.set_xlabel("Log2(Non zero CPM + 1)")
+
         else:
             for nb, bw in enumerate(bws):
                 id1 = IDs_rev[bw]
-                if IDs_rev[bw] in controlCounts:
-                    x0 = np.array(np.log2(controlCounts[IDs_rev[bw]]))
+                # Find matching control
+                pos = df_data['sample_id'] == IDs_rev[bws[0]]
+                controlID = df_data.loc[pos, "control"].item()
+                if controlID in controlCounts:
+                    x0 = np.array(np.log2(controlCounts[controlID]))
                 # No control specified for this file
                 else:
                     print(f"No control specified for {id1}")
+                    print(controlID)
+                    print()
                     x0 = np.array([0, 1])
                 x1 = np.array(np.log2(counts[bw]))
                 areas[id1] = gaussAreaRight(x0, x1, ax[nb])
@@ -297,10 +331,15 @@ for sps_id in species:
                 title += f"\nmaxFRiP: {FripData[id1]}, reads: {allBamReads[id1]:,}"
                 title += f"\n%Dupli:{dupRate[id1]}, AreaPass: {areas[id1]}"
                 ax[nb].set_title(title)
+                # Identify labels
+                if nb == 0:
+                    ax[nb].set_ylabel("KDE")
+                ax[nb].set_xlabel("Log2(Non zero CPM + 1)")
         fig.suptitle(f"{sps_id} -- {chip}", y = 1.05)
         plt.show()
         if saveFig:
             pdf.savefig(fig , bbox_inches='tight')
+        plt.close()
 
     if saveFig:
         pdf.close()

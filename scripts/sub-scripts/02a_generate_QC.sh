@@ -70,9 +70,9 @@ done
 
 
 # Overwrite nCPU, lets leave it as single thread
-nCPU=1
+#nCPU=1
 # Call distribution QC script
-python ${gitP}/scripts/sub-scripts/02a_py3_wholeGenome_binDistrib.py \
+python ${gitP}/scripts/sub-scripts/02b_py3_wholeGenome_binDistrib.py \
         ${sample_table} ${outGather} ${out_dir}/bam_files \
         ${out_dir} ${nCPU} ${condaEnv}
 
